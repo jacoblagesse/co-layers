@@ -6,8 +6,8 @@ const saltRounds = 10
 
 module.exports = {
   create(req, res) {
-    bcrypt.hash(req.body.pass, saltRounds, (err, hash) => {
-      if (err) { console.log(err) }
+    bcrypt.hash(req.body.pass, saltRounds, (e, hash) => {
+      if (e) { res.status(400).send({ message: e.toString() }) }
       return User
         .create({
           username: req.body.username,
@@ -27,16 +27,16 @@ module.exports = {
       })
       .then((user) => {
         if (!user) {
-          return res.status(404).send({
+          return res.status(400).send({
             message: 'User Not Found',
           });
         }
-        bcrypt.compare(req.body.pass, user.password, (err, match) => {
-          if (err) { console.log(err) }
+        bcrypt.compare(req.body.pass, user.password, (e, match) => {
+          if (e) { res.status(400).send({ message: e.toString() }) }
           if (match) {
             return res.status(200).send(user)
           } else {
-            return res.status(404).send({ message: 'Incorrect password' })
+            return res.status(400).send({ message: 'Incorrect password' })
           }
         });
       })
@@ -44,16 +44,4 @@ module.exports = {
         res.status(400).send({ message: error.toString() })
       });
   }
-  // list = (req, res) => {
-
-  // },
-  // find = (req, res) => {
-
-  // },
-  // update = (req, res) => {
-
-  // },
-  // destroy = (req, res) => {
-
-  // }
 }

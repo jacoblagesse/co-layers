@@ -3,6 +3,7 @@
     fluid
     class="pa-0 ma-0 container"
   >
+    <ErrorPopup />
     <FeaturePanel />
     <Toolbar />
     <MetadataPane v-if="featureSelected" :feature="selectedFeature" />
@@ -21,6 +22,7 @@ import Toolbar from '~/components/Toolbar'
 import UserPanel from '~/components/UserPanel'
 import FeaturePanel from '~/components/FeaturePanel'
 import MetadataPane from '~/components/MetadataPane'
+import ErrorPopup from '~/components/ErrorPopup'
 
 export default {
   name: 'Workspace',
@@ -29,7 +31,8 @@ export default {
     Toolbar,
     MetadataPane,
     UserPanel,
-    FeaturePanel
+    FeaturePanel,
+    ErrorPopup
   },
   data () {
     return {
@@ -37,7 +40,8 @@ export default {
       clients: [],
       views: [],
       featureSelected: false,
-      selectedFeature: null
+      selectedFeature: null,
+      updateAfter: ['map/saveFeature', 'map/updateFeature', 'map/loadFeature']
     }
   },
   computed: {
@@ -53,7 +57,8 @@ export default {
   },
   mounted () {
     this.socket = this.$nuxtSocket({
-      channel: '/main'
+      channel: '/main',
+      persist: true
     })
 
     this.socket.on('UPDATE_CLIENTS', (data) => {
@@ -61,6 +66,7 @@ export default {
     })
 
     this.socket.on('FEATURES', (data) => {
+      console.log(data)
       this.setFeatures(data)
     })
 
@@ -72,15 +78,21 @@ export default {
       this.setUserInfo(data)
     })
 
+    this.$store.subscribeAction({
+      after: (action, state) => {
+        if (this.updateAfter.includes(action.type)) {
+          console.log(action.type)
+        }
+      }
+    })
+
     this.$root.$on('featureLayerChange', (features) => {
       this.syncFeatures(features)
     })
   },
   methods: {
     syncFeatures (features) {
-      console.log(features.filter(f => f.properties.userId === this.$store.getters.userId))
-      this.socket.emit('SET_FEATURE', features.filter(f => f.properties.uerId === this.$store.getters.userId))
-      console.log(features.filter(f => f.properties.userId === this.$store.getters.userId))
+      this.socket.emit('SET_FEATURE', this.$store.getters['map/userMapFeatures'])
     },
     sendView (viewData) {
       this.socket.emit('SET_VIEW', viewData)
@@ -89,7 +101,8 @@ export default {
       this.clients = data
     },
     setFeatures (data) {
-      // this.$store.commit('map/setMapFeatures', [])
+      console.log(data)
+      this.$store.commit('map/setMapFeatures', [])
       data.forEach((client) => {
         if (client.features) {
           client.features.forEach((feature) => {

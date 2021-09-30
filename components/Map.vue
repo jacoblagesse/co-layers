@@ -13,19 +13,20 @@
     </vl-layer-tile>
 
     <vl-layer-vector>
-      <vl-source-vector :features.sync="mapFeatures" ident="source" projection="EPSG:4326"></vl-source-vector>
+      <vl-source-vector :features.sync="mapViews" ref="featureLayer"></vl-source-vector>
       <vl-style-func :factory="styleFactory" />
     </vl-layer-vector>
 
     <vl-layer-vector>
-      <vl-source-vector :features.sync="mapViews"></vl-source-vector>
+      <vl-source-vector :features.sync="mapFeatures" ident="source"></vl-source-vector>
       <vl-style-func :factory="styleFactory" />
     </vl-layer-vector>
 
     <vl-interaction-select
       source="source"
       @select="selectFeature"
-    />
+      :features.sync="selectedFeatures"
+    />1
 
     <vl-interaction-draw v-if="drawMode" @drawend="drawEnd" @drawstart="drawStart" :type="drawType" source="source">
       <vl-style-func :factory="styleFactory" />
@@ -63,7 +64,9 @@ export default {
       rotation: 0,
       extent: [],
       features: [],
-      mapViews: this.views
+      mapViews: this.views,
+      selectedFeatures: [],
+      updating: false
     }
   },
   computed: {
@@ -71,7 +74,9 @@ export default {
       get () {
         return this.$store.getters['map/mapFeatures']
       },
+      // NEED TO FIX -> loaded features don't have an id set when drawmode is false
       set (features) {
+        console.log(features)
         this.$store.commit('map/setMapFeatures', features)
       }
     },
@@ -110,30 +115,39 @@ export default {
     styleFactory () {
       return (feature) => {
         return createStyle({
-          fillColor: 'rgba(255,255,255,0.5)',
-          strokeColor: feature.get('color')
+          fillColor: 'rgba(255,255,255,0.2)',
+          strokeColor: feature.get('color') || 'black'
         })
       }
     },
     drawStart (e) {
       e.feature.set('color', this.$store.getters.drawColor)
       e.feature.set('userId', this.$store.getters.userId)
+      e.feature.set('revision', 0)
     },
     drawEnd (e) {
-      this.saveFeature(e.feature.id_)
-      this.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
+      this.saveFeature(e.feature)
+    },
+    modifyStart (e) {
+      // e.features.getArray().forEach(feature => {
+
+      // })
+      this.updating = true
     },
     modifyEnd (e) {
-      this.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
       const features = e.features.getArray()
+      this.getUpdatedFeatures(features)
+      this.updating = false
+    },
+    getUpdatedFeatures (features) {
       features.forEach((feature) => {
         const mapFeature = this.$store.getters['map/mapFeatures'].find(f => f.id === feature.id_)
         const rev = feature.getRevision()
         // was getting a wierd double put req with one undefined id
-        if (mapFeature && rev > mapFeature.properties.revision) {
-          console.log(mapFeature)
+        if (mapFeature && (rev > mapFeature.properties.revision)) {
           this.$store.commit('map/updateFeatureRev', { featureId: mapFeature.id, rev })
-          this.updateFeature(mapFeature)
+          this.updateFeature(mapFeature, feature)
+          this.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
         }
       })
     },
@@ -173,17 +187,25 @@ export default {
         [box[0], box[1]]
       ]
     },
-    saveFeature (id) {
-      this.$store.dispatch('map/saveFeature', id)
-      this.$root.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
+    saveFeature (feature) {
+      console.log('Starting to save feature')
+      this.$store.dispatch('map/saveFeature', feature.id_).then((res) => {
+        // Need to update feature component properties to match mapFeatures; otherwise mapFeature properties may be overridden in computed setter
+        // There's probably a better way to do this
+        feature.set('savedId', res.id)
+        feature.set('updatedAt', res.updatedAt)
+        console.log('Sending feature to socket')
+        this.$root.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
+      })
     },
     loadFeature (feature) {
       this.$store.dispatch('map/loadFeature', feature)
-      this.$root.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
     },
-    updateFeature (feature) {
-      this.$store.dispatch('map/updateFeature', feature)
-      this.$root.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
+    updateFeature (mapFeature, feature) {
+      this.$store.dispatch('map/updateFeature', mapFeature).then((res) => {
+        feature.set('updatedAt', res.updatedAt)
+        this.$root.$emit('featureLayerChange', this.$store.getters['map/mapFeatures'])
+      })
     }
   }
 }

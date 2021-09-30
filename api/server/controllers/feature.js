@@ -38,12 +38,18 @@ module.exports = {
   },
   update(req, res) {
     return Feature
-      .update({
-        geometry: req.body.geom
-      }, {
-        where: { id: req.params.id }
+      .findByPk(req.params.id)
+      .then((feature) => {
+        if (new Date(feature.updatedAt).getTime() == new Date(req.body.updatedAt).getTime()) {
+          return feature
+            .update({
+              geometry: req.body.geom
+            })
+            .then(updatedFeature => res.status(200).send(updatedFeature))
+        } else {
+          res.status(400).send({ message: 'Update rejected, feature has already been modified.' })
+        }
       })
-      .then(updatedFeature => res.status(200).send(updatedFeature))
       .catch(error => res.status(400).send({ message: error.toString() }))
   },
   destroy(req, res) {

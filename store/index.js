@@ -41,10 +41,8 @@ export const actions = {
   async login ({ commit }, params) {
     await axios.post(`${baseUrl}/login`, params)
       .then((res) => {
-        console.log(res)
         commit('setUserData', { id: res.data.id, username: res.data.username, color: res.data.drawColor })
         commit('setAuthError', null)
-        this.$root.$emit('close')
       })
       .catch(err => commit('setAuthError', err.response.data.message))
   },
@@ -53,7 +51,6 @@ export const actions = {
       .then((res) => {
         commit('setUserData', { id: res.data.id, username: res.data.username, color: res.data.drawColor })
         commit('setAuthError', null)
-        this.$root.$emit('close')
       })
       .catch(err => commit('setAuthError', err.response.data.message))
   }

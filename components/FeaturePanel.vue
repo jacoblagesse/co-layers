@@ -2,7 +2,7 @@
   <div class="featurepanel">
     <p class="sub">Your saved features | <a @click="removeAll">Delete all</a></p>
     <v-list>
-      <v-list-item v-for="feature in savedFeatures" :key="feature.id" style="margin-bottom: 5px;">
+      <v-list-item v-for="feature in savedFeatures" :key="feature.properties.savedId" style="margin-bottom: 5px;">
         <v-btn
           elevation="0"
           color="black"
@@ -14,8 +14,8 @@
           <v-icon>{{ getIcon(feature) }}</v-icon>
         </v-btn>
         <div class="content">
-          <div class="username"><a @click="remove(feature.id)">x </a>{{ feature.type }}</div>
-          <div class="id">{{ feature.createdAt }}</div>
+          <div class="username"><a @click="remove(feature.properties.savedId)">x </a>{{ feature.geometry.type }}</div>
+          <div class="id">{{ feature.properties.createdAt }}</div>
         </div>
       </v-list-item>
     </v-list>
@@ -47,7 +47,7 @@ export default {
       this.$root.$emit('loadFeature', feature)
     },
     getIcon (feature) {
-      switch (feature.type) {
+      switch (feature.geometry.type) {
         case 'Point':
           return 'mdi-circle-small'
         case 'LineString':

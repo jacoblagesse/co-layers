@@ -60,7 +60,14 @@ export default {
   io: {
     sockets: [{
       url: 'http://localhost:8080',
-      default: true
+      default: true,
+      vuex: {
+        mutations: [],
+        actions: [],
+        emitBacks: [
+          // 'map/mapFeatures <-- SET_FEATURE + map/mapFeatures'
+        ]
+      }
     }]
   },
 

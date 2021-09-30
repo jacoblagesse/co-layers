@@ -52,8 +52,10 @@ io.of('/main').on('connection', (socket) => {
     io.of('/main').emit('UPDATE_CLIENTS', clients)
   })
 
-  socket.on('SET_FEATURE', (data) => {
+  socket.on('SET_FEATURES', (data) => {
     let clients = []
+
+    console.log('DISPATCH RECEIVED')
 
     socket['clientData'].features = data
     io.of('/main').sockets.forEach(client => {
